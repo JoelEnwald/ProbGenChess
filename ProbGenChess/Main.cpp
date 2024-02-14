@@ -8,6 +8,7 @@
 #include <iostream>
 #include <iomanip>
 
+// Macros
 #define DEPTH 3
 #define EPOCHS 200
 #define BROWS 6
@@ -17,10 +18,10 @@
 
 class TrainingSession {
 private:
-    AdvancedEvaluator6 eval1;
-    AdvancedEvaluator6 eval2;
+    AdvEvaluator6 eval1;
+    AdvEvaluator6 eval2;
 public:
-    AdvancedEvaluator6* eval_curr;
+    AdvEvaluator6* eval_curr;
     TrainingSession() : eval_curr{NULL}, eval1{NULL}, eval2{NULL} {}
 
     double comparePositions(Position* pos, int player) {
@@ -122,12 +123,12 @@ public:
         Position p(BROWS, BCOLS);
         p.setStartingPosition();
         // eval1 gets white pieces, eval2 black ones
-        AdvancedEvaluator6 eval1(0);
-        AdvancedEvaluator6 eval2(1);
+        AdvEvaluator6 eval1(0);
+        AdvEvaluator6 eval2(1);
 
         // Loop for games
         while (gamecounter <= EPOCHS) {
-            if (gamecounter % 50 == 1) {
+            if ((gamecounter % 50) == 1) {
                 std::cout << "Wins and losses are " << eval1_win_counter << " to " << eval2_win_counter << "\n";
             }
 
@@ -269,13 +270,13 @@ void analysegames(std::vector<std::vector<std::vector<std::vector<int>>>> games,
     }
 
     int hallo = 5;
+}
 
-    // cProfile.run('TrainingSession.startSession(TrainingSession())') // Profiling in C++ would require a different approach
-
+int main() {
     TrainingSession session;
     std::pair<std::vector<std::vector<std::vector<std::vector<int>>>>, std::vector<std::vector<std::vector<std::vector<int>>>>> result = session.startSession();
     std::vector<std::vector<std::vector<std::vector<int>>>> gamesdata = result.first;
     std::vector<std::vector<std::vector<std::vector<int>>>> wingamesdata = result.second;
     analysegames(gamesdata, wingamesdata);
-    hallo = 5;
+    int hallo = 5;
 }

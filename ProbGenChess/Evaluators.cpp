@@ -6,136 +6,232 @@
 #include <cmath>
 #include <iostream>
 #include <iomanip>
-#include <row.idl>
+#include <array>
 
-int MINWHITEPIECE = 1;
-int MAXWHITEPIECE = 6;
-int MINBLACKPIECE = 7;
-int MAXBLACKPIECE = 12;
-int N_PIECES = 13;
-std::vector<std::string> PIECE_STRINGS = { "EMPTY", "WKING", "WQUEEN", "WROOK", "WBISHOP", "WKNIGHT", "WPAWN", "BKING", "BQUEEN", "BROOK", "BBISHOP", "BKNIGHT", "BPAWN" };
+//TO - DO: DON'T FLIP THE EVALUATION TABLES WHEN EVALUATING (COSTLY),
+//BUT MAKE THE EVALUATOR FUNCTIONS TAKE THE DIRECTION INTO ACCOUNT
 
+#define MINWHITEPIECE 1
+#define MAXWHITEPIECE 6
+#define MINBLACKPIECE 7
+#define MAXBLACKPIECE 12
+#define N_PIECES 13
 
-class Evaluator {
-private:
-    int color;
-
-    void getEvalMat(int piece) {
-        std::cout << "Getting the evaluation matrix is not supported yet. \n";
-    }
-};
+// Add inheritance. All evaluators should implement Evaluator superclass
 
 
-class AdvancedEvaluator6 : private Evaluator{
-public:
-    AdvancedEvaluator6(int color)
-        :color{ color } {
-        // Initialize boost tables
-        double PawnBoostTable[6][6] = {
-        {0.0, 0.0, 0.0, 0.0, 0.0, 0.0},
-        {0.3, 0.33, 0.4, 0.4, 0.33, 0.3},
-        {0.05, 0.08, 0.25, 0.25, 0.08, 0.08},
-        {0.0, 0.0, 0.2, 0.2, 0.0, 0.0},
-        {0.05, 0.01, -0.1, -0.1, 0.01, 0.05},
-        {0.0, 0.0, 0.0, 0.0, 0.0, 0.0}};
-        double KnightBoostTable[6][6] = {
-         {-0.5, -0.35, -0.3, -0.3, -0.35, -0.5},
-         {-0.35, -0.03, 0.08, 0.08, -0.03, -0.35},
-         {-0.3, 0.1, 0.2, 0.2, 0.1, -0.3},
-         {-0.3, 0.08, 0.2, 0.2, 0.08, -0.3},
-         {-0.35, -0.01, 0.08, 0.08, -0.01, -0.35},
-         {-0.5, -0.35, -0.3, -0.3, -0.35, -0.5} };
-        double BishopBoostTable[6][6] = {
-         {-0.2, -0.1, -0.1, -0.1, -0.1, -0.2},
-         {-0.1, 0.01, 0.05, 0.05, 0.01, -0.1},
-         {-0.1, 0.05, 0.1, 0.1, 0.05, -0.1},
-         {-0.1, 0.05, 0.1, 0.1, 0.05, -0.1},
-         {-0.1, 0.06, 0.05, 0.05, 0.06, -0.1},
-         {-0.2, -0.1, -0.1, -0.1, -0.1, -0.2} };
-        double RookBoostTable[6][6] = {
-         {0.0, 0.0, 0.0, 0.0, 0.0, 0.0},
-         {0.02, 0.05, 0.05, 0.05, 0.05, 0.02},
-         {-0.05, 0.0, 0.0, 0.0, 0.0, -0.05},
-         {-0.05, 0.0, 0.0, 0.0, 0.0, -0.05},
-         {-0.05, 0.0, 0.0, 0.0, 0.0, -0.05},
-         {0.0, 0.0, 0.05, 0.05, 0.0, 0.0} };
-        double QueenBoostTable[6][6] = {
-        {-0.2, -0.1, -0.05, -0.05, -0.1, -0.2},
-        {-0.1, 0.01, 0.03, 0.03, 0.01, -0.1},
-        {-0.05, 0.03, 0.05, 0.05, 0.03, -0.05},
-        {0.0, 0.03, 0.05, 0.05, 0.03, -0.05},
-        {-0.1, 0.04, 0.01, 0.01, 0.04, -0.1},
-        {-0.2, -0.1, -0.05, -0.05, -0.1, -0.2} };
-        double KingBoostTable[6][6] = {
-        {-0.3, -0.4, -0.5, -0.5, -0.4, -0.3},
-        {-0.3, -0.4, -0.5, -0.5, -0.4, -0.3},
-        {-0.3, -0.4, -0.5, -0.5, -0.4, -0.3},
-        {-0.2, -0.3, -0.4, -0.4, -0.3, -0.2},
-        {0.05, 0.05, -0.1, -0.1, 0.05, 0.05},
-        {0.2, 0.2, 0.0, 0.0, 0.2, 0.2} };
-        double KingBoostTableEndgame[6][6] = {
-        {-0.5, -0.35, -0.2, -0.2, -0.35, -0.5},
-        {-0.3, -0.05, 0.15, 0.15, -0.05, -0.3},
-        {-0.3, 0.1, 0.4, 0.4, 0.1, -0.3},
-        {-0.3, 0.1, 0.4, 0.4, 0.1, -0.3},
-        {-0.3, -0.05, 0.15, 0.15, -0.05, -0.3},
-        {-0.5, -0.3, -0.3, -0.3, -0.3, -0.5} };
+// Initialize boost tables
+    // Due to reduced board size, I lowered the values of pieces other than pawn by 25%,
+    // since I think pawns are relatively stronger on a smaller board
+AdvEvaluator6::AdvEvaluator6(int color)
+    : color{ color }
+{
+    
+    PawnBoostTable = { {
+    {0.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+    {0.3, 0.33, 0.4, 0.4, 0.33, 0.3},
+    {0.05, 0.08, 0.25, 0.25, 0.08, 0.08},
+    {0.0, 0.0, 0.2, 0.2, 0.0, 0.0},
+    {0.05, 0.01, -0.1, -0.1, 0.01, 0.05},
+    {0.0, 0.0, 0.0, 0.0, 0.0, 0.0}
+    } };
+    KnightBoostTable = { {
+    {-0.5, -0.35, -0.3, -0.3, -0.35, -0.5},
+    {-0.35, -0.03, 0.08, 0.08, -0.03, -0.35},
+    {-0.3, 0.1, 0.2, 0.2, 0.1, -0.3},
+    {-0.3, 0.08, 0.2, 0.2, 0.08, -0.3},
+    {-0.35, -0.01, 0.08, 0.08, -0.01, -0.35},
+    {-0.5, -0.35, -0.3, -0.3, -0.35, -0.5} } };
+    BishopBoostTable = { {
+    {-0.2, -0.1, -0.1, -0.1, -0.1, -0.2},
+    {-0.1, 0.01, 0.05, 0.05, 0.01, -0.1},
+    {-0.1, 0.05, 0.1, 0.1, 0.05, -0.1},
+    {-0.1, 0.05, 0.1, 0.1, 0.05, -0.1},
+    {-0.1, 0.06, 0.05, 0.05, 0.06, -0.1},
+    {-0.2, -0.1, -0.1, -0.1, -0.1, -0.2} } };
+    RookBoostTable = { {
+    {0.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+    {0.02, 0.05, 0.05, 0.05, 0.05, 0.02},
+    {-0.05, 0.0, 0.0, 0.0, 0.0, -0.05},
+    {-0.05, 0.0, 0.0, 0.0, 0.0, -0.05},
+    {-0.05, 0.0, 0.0, 0.0, 0.0, -0.05},
+    {0.0, 0.0, 0.05, 0.05, 0.0, 0.0} } };
+    QueenBoostTable = { {
+    {-0.2, -0.1, -0.05, -0.05, -0.1, -0.2},
+    {-0.1, 0.01, 0.03, 0.03, 0.01, -0.1},
+    {-0.05, 0.03, 0.05, 0.05, 0.03, -0.05},
+    {0.0, 0.03, 0.05, 0.05, 0.03, -0.05},
+    {-0.1, 0.04, 0.01, 0.01, 0.04, -0.1},
+    {-0.2, -0.1, -0.05, -0.05, -0.1, -0.2} } };
+    KingBoostTable = { {
+    {-0.3, -0.4, -0.5, -0.5, -0.4, -0.3},
+    {-0.3, -0.4, -0.5, -0.5, -0.4, -0.3},
+    {-0.3, -0.4, -0.5, -0.5, -0.4, -0.3},
+    {-0.2, -0.3, -0.4, -0.4, -0.3, -0.2},
+    {0.05, 0.05, -0.1, -0.1, 0.05, 0.05},
+    {0.2, 0.2, 0.0, 0.0, 0.2, 0.2} } };
+    KingBoostTableEndgame = { {
+    {-0.5, -0.35, -0.2, -0.2, -0.35, -0.5},
+    {-0.3, -0.05, 0.15, 0.15, -0.05, -0.3},
+    {-0.3, 0.1, 0.4, 0.4, 0.1, -0.3},
+    {-0.3, 0.1, 0.4, 0.4, 0.1, -0.3},
+    {-0.3, -0.05, 0.15, 0.15, -0.05, -0.3},
+    {-0.5, -0.3, -0.3, -0.3, -0.3, -0.5}
+        } };
+    
 
-        // Due to reduced board size, I lowered the values of pieces other than pawn by 25%,
-        // since I think pawns are stronger on a smaller board
-    }
+    /*
+    double PawnBoostTable[6][6] = {
+    {0.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+    {0.3, 0.33, 0.4, 0.4, 0.33, 0.3},
+    {0.05, 0.08, 0.25, 0.25, 0.08, 0.08},
+    {0.0, 0.0, 0.2, 0.2, 0.0, 0.0},
+    {0.05, 0.01, -0.1, -0.1, 0.01, 0.05},
+    {0.0, 0.0, 0.0, 0.0, 0.0, 0.0} };
+    double KnightBoostTable[6][6] = {
+    {-0.5, -0.35, -0.3, -0.3, -0.35, -0.5},
+    {-0.35, -0.03, 0.08, 0.08, -0.03, -0.35},
+    {-0.3, 0.1, 0.2, 0.2, 0.1, -0.3},
+    {-0.3, 0.08, 0.2, 0.2, 0.08, -0.3},
+    {-0.35, -0.01, 0.08, 0.08, -0.01, -0.35},
+    {-0.5, -0.35, -0.3, -0.3, -0.35, -0.5} };
+    double BishopBoostTable[6][6] = {
+    {-0.2, -0.1, -0.1, -0.1, -0.1, -0.2},
+    {-0.1, 0.01, 0.05, 0.05, 0.01, -0.1},
+    {-0.1, 0.05, 0.1, 0.1, 0.05, -0.1},
+    {-0.1, 0.05, 0.1, 0.1, 0.05, -0.1},
+    {-0.1, 0.06, 0.05, 0.05, 0.06, -0.1},
+    {-0.2, -0.1, -0.1, -0.1, -0.1, -0.2} };
+    double RookBoostTable[6][6] = {
+    {0.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+    {0.02, 0.05, 0.05, 0.05, 0.05, 0.02},
+    {-0.05, 0.0, 0.0, 0.0, 0.0, -0.05},
+    {-0.05, 0.0, 0.0, 0.0, 0.0, -0.05},
+    {-0.05, 0.0, 0.0, 0.0, 0.0, -0.05},
+    {0.0, 0.0, 0.05, 0.05, 0.0, 0.0} };
+    double QueenBoostTable[6][6] = {
+    {-0.2, -0.1, -0.05, -0.05, -0.1, -0.2},
+    {-0.1, 0.01, 0.03, 0.03, 0.01, -0.1},
+    {-0.05, 0.03, 0.05, 0.05, 0.03, -0.05},
+    {0.0, 0.03, 0.05, 0.05, 0.03, -0.05},
+    {-0.1, 0.04, 0.01, 0.01, 0.04, -0.1},
+    {-0.2, -0.1, -0.05, -0.05, -0.1, -0.2} };
+    double KingBoostTable[6][6] = {
+    {-0.3, -0.4, -0.5, -0.5, -0.4, -0.3},
+    {-0.3, -0.4, -0.5, -0.5, -0.4, -0.3},
+    {-0.3, -0.4, -0.5, -0.5, -0.4, -0.3},
+    {-0.2, -0.3, -0.4, -0.4, -0.3, -0.2},
+    {0.05, 0.05, -0.1, -0.1, 0.05, 0.05},
+    {0.2, 0.2, 0.0, 0.0, 0.2, 0.2} };
+    double KingBoostTableEndgame[6][6] = {
+    {-0.5, -0.35, -0.2, -0.2, -0.35, -0.5},
+    {-0.3, -0.05, 0.15, 0.15, -0.05, -0.3},
+    {-0.3, 0.1, 0.4, 0.4, 0.1, -0.3},
+    {-0.3, 0.1, 0.4, 0.4, 0.1, -0.3},
+    {-0.3, -0.05, 0.15, 0.15, -0.05, -0.3},
+    {-0.5, -0.3, -0.3, -0.3, -0.3, -0.5} };
+    */
+}
 
-    double eval(Position* paramPosition, int color) {
-        if (color == 0) {
-            int hallo = 5;
-        }
-        else {
-            int hallo = 5;
-        }
-        // The board is stored at different orientation to the tables. Rotate the board
-        std::vector<std::vector<int>> board = rotate90(paramPosition->board);
-        int board_size = board.size();
-        // Count the number of pieces on the board, to check which King table to use
-        int n_pieces = std::accumulate(board.begin(), board.end(), 0,[](int sum, std::vector<int> row) {
-            return sum + std::count_if(row.begin(), row.end(),[](int i){
-                return i != 0;
-                });
-            });
-        if (n_pieces <= 13) {
-            int hallo = 5;
-        }
-        // Does the board contain a King?
-        if (std::find(board.begin(), board.end(), 1) == board.end() || std::find(board.begin(), board.end(), 7) == board.end()) {
-            int hallo = 5;
-        }
-        double d = 0;
-        // Add optional randomness to algorithm
-        // d = random.random() - 0.5
-        for (int k = 0; k < board_size; k++) {
-            // ... (rest of your code here) ...
-        }
-    }
+// DOES NOT CURRENTLY WORK
+std::vector<std::vector<int>> AdvEvaluator6::rotate90(std::vector<std::vector<int>>& matrix) {
+    // implement 90 degree rotation here
+    return matrix;
+}
 
-
-    // Does nothing
-    void update(std::vector<std::vector<std::vector<int>>> board_states, int result) {
+double AdvEvaluator6::eval(Position* paramPosition, int color) {
+    if (color == 0) {
         int hallo = 5;
     }
-
-    std::vector<std::vector<int>> rotate90(std::vector<std::vector<int>>& matrix) {
-        // ... (implement your 90 degree rotation here) ...
+    else {
+        int hallo = 5;
     }
-    public:
-        int color;
-        double PawnBoostTable[6][6];
-        double KnightBoostTable[6][6];
-        double BishopBoostTable[6][6];
-        double RookBoostTable[6][6];
-        double QueenBoostTable[6][6];
-        double KingBoostTable[6][6];
-        double KingBoostTableEndgame[6][6];
-};
+    // The board is stored at different orientation to the tables. Rotate the board
+    // ROTATION DOES NOT CURRENTLY WORK
+    std::vector<std::vector<int>> board = rotate90(paramPosition->board);
+    int board_size = board.size();
+    // Count the number of pieces on the board, to check which King table to use
+    int n_pieces = std::accumulate(board.begin(), board.end(), 0,[](int sum, std::vector<int> row) {
+        return sum + std::count_if(row.begin(), row.end(),[](int i){
+            return i != 0;
+            });
+        });
+    if (n_pieces <= 13) {
+        int hallo = 5;
+    }
+    // Does the board contain a King?
+    /*
+    if (std::find(board.begin(), board.end(), 1) == board.end() || std::find(board.begin(), board.end(), 7) == board.end()) {
+        int hallo = 5;
+    }
+    */
+    double d = 0;
+    // Add optional randomness to algorithm
+    // d = random.random() - 0.5
+    for (int k = 0; k < board_size; ++k) {
+        for (int m = 0; m < board_size; ++m) {
+            if (board[k][m] != 0) {
+                // White pieces
+                if (board[k][m] == 1) {
+                    if (n_pieces <= board_size) {
+                        d += (1e6 + KingBoostTableEndgame[k][m]);
+                    }
+                    else {
+                        d += (1e6 + KingBoostTable[k][m]);
+                    }
+                }
+                else if (board[k][m] == 2) {
+                    d += (7 + QueenBoostTable[k][m]);
+                }
+                else if (board[k][m] == 3) {
+                    d += (4 + RookBoostTable[k][m]);
+                }
+                else if (board[k][m] == 4) {
+                    d += (2.4 + BishopBoostTable[k][m]);
+                }
+                else if (board[k][m] == 5) {
+                    d += (2.5 + KnightBoostTable[k][m]);
+                }
+                else if (board[k][m] == 6) {
+                    d += (1 + PawnBoostTable[k][m]);
+                }
+                // For black pieces, a mirrored board is used
+                else if (board[k][m] == 7) {
+                    if (n_pieces <= board_size) {
+                        d -= (1e6 + KingBoostTableEndgame[6 - k - 1][m]);
+                    }
+                    else {
+                        d -= (1e6 + KingBoostTable[6 - k - 1][m]);
+                    }
+                }
+                else if (board[k][m] == 8) {
+                    d -= (7 + QueenBoostTable[6 - k - 1][m]);
+                }
+                else if (board[k][m] == 9) {
+                    d -= (4 + RookBoostTable[6 - k - 1][m]);
+                }
+                else if (board[k][m] == 10) {
+                    d -= (2.4 + BishopBoostTable[6 - k - 1][m]);
+                }
+                else if (board[k][m] == 11) {
+                    d -= (2.5 + KnightBoostTable[6 - k - 1][m]);
+                }
+                else if (board[k][m] == 12) {
+                    d -= (1 + PawnBoostTable[6 - k - 1][m]);
+                }
+            }
+        }
+    }
+    return d;
+}
 
+
+// Does nothing
+void AdvEvaluator6::update(std::vector<std::vector<std::vector<int>>> board_states, int result) {
+    int hallo = 5;
+}
+
+/*
 class AdvancedEvaluator8{
 
 public:
@@ -623,6 +719,4 @@ public:
     std::vector<int> piecewincounts;
     std::vector<double> piecevalues;
 };
-
-int color = 0;
-AdvancedEvaluator6 hallo = AdvancedEvaluator6(color);
+*/
